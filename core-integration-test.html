@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Required headers for Pyodide -->
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+    <title>WebRunnr Core Integration Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover:not(:disabled) {
+            background-color: #005a9e;
+        }
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        .output {
+            background-color: #1a1a1a;
+            border: 1px solid #555;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 8px 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+            display: inline-block;
+        }
+        .status.ready {
+            background-color: #2d5a2d;
+            color: #90ee90;
+        }
+        .status.running {
+            background-color: #2d4a5a;
+            color: #87ceeb;
+        }
+        .status.error {
+            background-color: #5a2d2d;
+            color: #ff6b6b;
+        }
+        .status.waiting {
+            background-color: #5a5a2d;
+            color: #ffff90;
+        }
+        .test-section {
+            border-left: 4px solid #007acc;
+            padding-left: 15px;
+            margin: 20px 0;
+        }
+        .log {
+            background-color: #1a1a1a;
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .success {
+            color: #90ee90;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+        .info {
+            color: #87ceeb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 WebRunnr Core Integration Test</h1>
+    <p>Testing the WebRunnr Core package with Python executor</p>
+
+    <div class="container">
+        <h3>System Status</h3>
+        <div id="systemStatus" class="status waiting">Initializing...</div>
+        <div id="supportedLanguages"></div>
+    </div>
+
+    <div class="container test-section">
+        <h3>📝 Manual Code Execution Test</h3>
+        <textarea id="codeEditor" placeholder="Enter your Python code here...">print("Hello from WebRunnr Core!")
+print("Testing the integration...")
+
+# Test basic functionality
+import math
+print(f"Square root of 25: {math.sqrt(25)}")
+
+# Test user input
+name = input("What's your name? ")
+print(f"Nice to meet you, {name}!")
+
+# Test error handling
+try:
+    result = 10 / 2
+    print(f"10 / 2 = {result}")
+except Exception as e:
+    print(f"Error: {e}")
+
+print("Test completed successfully!")</textarea>
+        
+        <div>
+            <button id="runButton" onclick="runManualTest()" disabled>Run Code</button>
+            <button onclick="clearOutput()">Clear Output</button>
+            <button onclick="loadTestCode()">Load Test Code</button>
+        </div>
+        
+        <h4>Output:</h4>
+        <div id="output" class="output">Waiting for initialization...</div>
+    </div>
+
+    <div class="container test-section">
+        <h3>🧪 Automated Tests</h3>
+        <button id="runTestsButton" onclick="runAutomatedTests()" disabled>Run All Tests</button>
+        <button onclick="clearTestLog()">Clear Log</button>
+        
+        <h4>Test Results:</h4>
+        <div id="testLog" class="log">Ready to run tests...</div>
+    </div>
+
+    <script type="module">
+        // Mock the WebRunnr Core since we're testing the integration
+        // In a real implementation, this would import from the built module
+        
+        class WebRunnrCoreIntegration {
+            constructor() {
+                this.worker = null;
+                this.isReady = false;
+                this.eventHandlers = new Set();
+                this.inputHandler = this.defaultInputHandler;
+                this.supportedLanguages = ['python'];
+                this.initialize();
+            }
+
+            async initialize() {
+                log('🔧 Initializing WebRunnr Core...', 'info');
+                updateSystemStatus('Initializing Python executor...', 'waiting');
+                
+                try {
+                    // Create Python worker
+                    this.worker = new Worker('./packages/py-executor/dist/index.js', { type: 'module' });
+                    
+                    this.worker.onmessage = (event) => this.handleWorkerMessage(event);
+                    this.worker.onerror = (error) => {
+                        log(`❌ Worker error: ${error.message}`, 'error');
+                        updateSystemStatus('Worker Error', 'error');
+                    };
+                    
+                } catch (error) {
+                    log(`❌ Failed to initialize: ${error.message}`, 'error');
+                    updateSystemStatus('Initialization Failed', 'error');
+                }
+            }
+
+            handleWorkerMessage(event) {
+                const { type, data, prompt } = event.data;
+                
+                // Notify all event handlers
+                this.eventHandlers.forEach(handler => {
+                    try {
+                        handler(event.data);
+                    } catch (e) {
+                        console.error('Event handler error:', e);
+                    }
+                });
+
+                switch (type) {
+                    case 'ready':
+                        this.isReady = true;
+                        log('✅ Python executor ready', 'success');
+                        updateSystemStatus('Ready', 'ready');
+                        document.getElementById('runButton').disabled = false;
+                        document.getElementById('runTestsButton').disabled = false;
+                        updateSupportedLanguages();
+                        break;
+                        
+                    case 'input_request':
+                        this.handleInputRequest(prompt);
+                        break;
+                }
+            }
+
+            async handleInputRequest(prompt) {
+                try {
+                    const response = await this.inputHandler(prompt);
+                    this.worker.postMessage({ type: 'input_response', value: response });
+                } catch (error) {
+                    log(`❌ Input handler error: ${error.message}`, 'error');
+                    this.worker.postMessage({ type: 'input_response', value: '' });
+                }
+            }
+
+            defaultInputHandler = async (prompt) => {
+                if (typeof window !== 'undefined' && window.prompt) {
+                    return window.prompt(prompt) || '';
+                }
+                return 'automated_input';
+            };
+
+            async execute(request) {
+                if (!this.isReady) {
+                    throw new Error('Executor not ready');
+                }
+
+                return new Promise((resolve) => {
+                    let stdout = '';
+                    let stderr = '';
+                    let success = false;
+                    const startTime = Date.now();
+
+                    const handler = (event) => {
+                        switch (event.type) {
+                            case 'stdout':
+                                stdout += event.data;
+                                break;
+                            case 'stderr':
+                                stderr += event.data;
+                                break;
+                            case 'done':
+                                success = true;
+                                this.eventHandlers.delete(handler);
+                                resolve({
+                                    stdout,
+                                    stderr,
+                                    success,
+                                    executionTime: Date.now() - startTime
+                                });
+                                break;
+                            case 'error':
+                                stderr += event.data;
+                                this.eventHandlers.delete(handler);
+                                resolve({
+                                    stdout,
+                                    stderr,
+                                    success: false,
+                                    executionTime: Date.now() - startTime
+                                });
+                                break;
+                        }
+                    };
+
+                    this.eventHandlers.add(handler);
+                    this.worker.postMessage({ code: request.code });
+                });
+            }
+
+            async executeWithEvents(request, eventHandler, options = {}) {
+                if (!this.isReady) {
+                    throw new Error('Executor not ready');
+                }
+
+                if (options.inputHandler) {
+                    this.inputHandler = options.inputHandler;
+                }
+
+                return new Promise((resolve) => {
+                    let stdout = '';
+                    let stderr = '';
+                    let success = false;
+                    const startTime = Date.now();
+
+                    const internalHandler = (event) => {
+                        eventHandler(event);
+                        
+                        switch (event.type) {
+                            case 'stdout':
+                                stdout += event.data;
+                                break;
+                            case 'stderr':
+                                stderr += event.data;
+                                break;
+                            case 'done':
+                                success = true;
+                                this.eventHandlers.delete(internalHandler);
+                                resolve({
+                                    stdout,
+                                    stderr,
+                                    success,
+                                    executionTime: Date.now() - startTime
+                                });
+                                break;
+                            case 'error':
+                                stderr += event.data;
+                                this.eventHandlers.delete(internalHandler);
+                                resolve({
+                                    stdout,
+                                    stderr,
+                                    success: false,
+                                    executionTime: Date.now() - startTime
+                                });
+                                break;
+                        }
+                    };
+
+                    this.eventHandlers.add(internalHandler);
+                    this.worker.postMessage({ code: request.code });
+                });
+            }
+
+            isLanguageSupported(language) {
+                return this.supportedLanguages.includes(language.toLowerCase());
+            }
+
+            getSupportedLanguages() {
+                return [...this.supportedLanguages];
+            }
+
+            setInputHandler(language, handler) {
+                if (language.toLowerCase() === 'python') {
+                    this.inputHandler = handler;
+                }
+            }
+        }
+
+        // Global variables
+        let core;
+        const outputDiv = document.getElementById('output');
+        const testLogDiv = document.getElementById('testLog');
+        const codeEditor = document.getElementById('codeEditor');
+        
+        // Utility functions
+        function updateSystemStatus(message, state) {
+            const statusDiv = document.getElementById('systemStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${state}`;
+        }
+
+        function updateSupportedLanguages() {
+            const div = document.getElementById('supportedLanguages');
+            const languages = core.getSupportedLanguages();
+            div.innerHTML = `<strong>Supported Languages:</strong> ${languages.join(', ')}`;
+        }
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            testLogDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            testLogDiv.scrollTop = testLogDiv.scrollHeight;
+            console.log(`[${timestamp}] ${message}`);
+        }
+
+        // Manual test functions
+        window.runManualTest = async () => {
+            const code = codeEditor.value.trim();
+            if (!code) {
+                alert('Please enter some code to execute.');
+                return;
+            }
+
+            outputDiv.textContent = '--- Starting execution ---\n';
+            updateSystemStatus('Executing...', 'running');
+
+            try {
+                const result = await core.executeWithEvents(
+                    { code, language: 'python' },
+                    (event) => {
+                        switch (event.type) {
+                            case 'stdout':
+                                outputDiv.textContent += event.data;
+                                break;
+                            case 'stderr':
+                                outputDiv.textContent += `[ERROR] ${event.data}`;
+                                break;
+                            case 'input_request':
+                                outputDiv.textContent += `\n[INPUT REQUESTED: ${event.prompt}]\n`;
+                                break;
+                            case 'done':
+                                outputDiv.textContent += '\n--- Execution completed ---\n';
+                                break;
+                            case 'error':
+                                outputDiv.textContent += `\n[EXECUTION ERROR] ${event.data}\n`;
+                                break;
+                        }
+                        outputDiv.scrollTop = outputDiv.scrollHeight;
+                    }
+                );
+
+                updateSystemStatus('Ready', 'ready');
+                log(`✅ Manual test completed in ${result.executionTime}ms`, 'success');
+                
+            } catch (error) {
+                outputDiv.textContent += `\n[CORE ERROR] ${error.message}\n`;
+                updateSystemStatus('Error', 'error');
+                log(`❌ Manual test failed: ${error.message}`, 'error');
+            }
+        };
+
+        window.clearOutput = () => {
+            outputDiv.textContent = 'Output cleared.';
+        };
+
+        window.loadTestCode = () => {
+            codeEditor.value = `# WebRunnr Core Integration Test
+print("🚀 Testing WebRunnr Core Integration")
+print("=" * 40)
+
+# Test 1: Basic functionality
+print("\\n📝 Test 1: Basic Python execution")
+import math
+result = math.sqrt(16)
+print(f"✅ math.sqrt(16) = {result}")
+
+# Test 2: User input
+print("\\n⌨️ Test 2: User input handling")
+name = input("Enter your name for testing: ")
+print(f"✅ Hello, {name}!")
+
+# Test 3: Error handling
+print("\\n🛡️ Test 3: Error handling")
+try:
+    safe_result = 10 / 2
+    print(f"✅ Safe operation: 10 / 2 = {safe_result}")
+except Exception as e:
+    print(f"❌ Unexpected error: {e}")
+
+# Test 4: Multiple outputs
+print("\\n📤 Test 4: Multiple outputs")
+for i in range(3):
+    print(f"Output line {i + 1}")
+
+print("\\n🎉 All tests completed!")`;
+        };
+
+        // Automated test functions
+        window.runAutomatedTests = async () => {
+            log('🧪 Starting automated tests...', 'info');
+            
+            const tests = [
+                {
+                    name: 'Basic execution test',
+                    code: 'print("Hello, World!")',
+                    expectSuccess: true,
+                    expectedOutput: 'Hello, World!'
+                },
+                {
+                    name: 'Math operations test',
+                    code: 'import math\nresult = math.sqrt(25)\nprint(f"Result: {result}")',
+                    expectSuccess: true,
+                    expectedOutput: 'Result: 5.0'
+                },
+                {
+                    name: 'Error handling test',
+                    code: 'print("Before error")\nresult = 10 / 0\nprint("After error")',
+                    expectSuccess: false
+                },
+                {
+                    name: 'Input handling test',
+                    code: 'name = input("Name: ")\nprint(f"Hello, {name}!")',
+                    expectSuccess: true,
+                    inputResponses: ['TestUser']
+                }
+            ];
+
+            let passed = 0;
+            let failed = 0;
+
+            for (const test of tests) {
+                log(`Running: ${test.name}`, 'info');
+                
+                try {
+                    // Set up custom input handler if needed
+                    if (test.inputResponses) {
+                        let inputIndex = 0;
+                        core.setInputHandler('python', async (prompt) => {
+                            const response = test.inputResponses[inputIndex++] || 'default';
+                            log(`  📥 Input "${prompt}" -> "${response}"`, 'info');
+                            return response;
+                        });
+                    }
+
+                    const result = await core.execute({
+                        code: test.code,
+                        language: 'python'
+                    });
+
+                    if (result.success === test.expectSuccess) {
+                        if (test.expectedOutput && !result.stdout.includes(test.expectedOutput)) {
+                            log(`  ❌ Output mismatch. Expected: "${test.expectedOutput}", Got: "${result.stdout.trim()}"`, 'error');
+                            failed++;
+                        } else {
+                            log(`  ✅ ${test.name} passed (${result.executionTime}ms)`, 'success');
+                            passed++;
+                        }
+                    } else {
+                        log(`  ❌ Success expectation failed. Expected: ${test.expectSuccess}, Got: ${result.success}`, 'error');
+                        failed++;
+                    }
+
+                } catch (error) {
+                    log(`  ❌ ${test.name} threw error: ${error.message}`, 'error');
+                    failed++;
+                }
+            }
+
+            log(`\\n📊 Test Summary: ${passed} passed, ${failed} failed`, passed === tests.length ? 'success' : 'error');
+            
+            // Reset input handler
+            core.setInputHandler('python', core.defaultInputHandler);
+        };
+
+        window.clearTestLog = () => {
+            testLogDiv.innerHTML = 'Test log cleared.';
+        };
+
+        // Initialize the core
+        core = new WebRunnrCoreIntegration();
+    </script>
+</body>
+</html>

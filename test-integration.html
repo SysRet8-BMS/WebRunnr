@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Required headers for Pyodide -->
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+    <title>🚀 WebRunnr Core - Python Integration Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .container {
+            background: rgba(255,255,255,0.05);
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+        textarea {
+            width: 100%;
+            height: 250px;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 8px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+            line-height: 1.5;
+        }
+        button {
+            background: linear-gradient(45deg, #007acc, #0099ff);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,204,0.4);
+        }
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .output {
+            background-color: #1a1a1a;
+            border: 1px solid #555;
+            padding: 15px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            line-height: 1.4;
+        }
+        .status {
+            padding: 10px 20px;
+            border-radius: 25px;
+            margin: 15px 0;
+            font-weight: bold;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        .status.ready {
+            background: linear-gradient(45deg, #2d5a2d, #4caf50);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(76,175,80,0.3);
+        }
+        .status.running {
+            background: linear-gradient(45deg, #2d4a5a, #2196f3);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(33,150,243,0.3);
+        }
+        .status.error {
+            background: linear-gradient(45deg, #5a2d2d, #f44336);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(244,67,54,0.3);
+        }
+        .status.waiting {
+            background: linear-gradient(45deg, #5a5a2d, #ff9800);
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(255,152,0,0.3);
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .feature-card {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        .feature-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .success { color: #4caf50; }
+        .error { color: #f44336; }
+        .info { color: #2196f3; }
+        .warning { color: #ff9800; }
+        
+        .code-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .example-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        .example-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 WebRunnr Core Integration Test</h1>
+        <p>Testing the WebRunnr Core package with Python executor using Pyodide</p>
+        <div id="systemStatus" class="status waiting">🔧 Initializing...</div>
+    </div>
+
+    <!-- Feature Overview -->
+    <div class="container">
+        <h3>🎯 Core Features</h3>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🐍</div>
+                <h4>Python Execution</h4>
+                <p>Full Python support with Pyodide</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h4>Async Processing</h4>
+                <p>Non-blocking code execution</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h4>Real-time Events</h4>
+                <p>Live output streaming</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⌨️</div>
+                <h4>Input Handling</h4>
+                <p>Interactive input() support</p>
+            </div>
+        </div>
+        <div id="supportedLanguages" style="text-align: center; margin-top: 15px; font-style: italic;"></div>
+    </div>
+
+    <!-- Code Examples -->
+    <div class="container">
+        <h3>📝 Quick Examples</h3>
+        <div class="code-examples">
+            <button class="example-btn" onclick="loadExample('hello')">
+                👋 Hello World
+            </button>
+            <button class="example-btn" onclick="loadExample('math')">
+                🧮 Math Operations
+            </button>
+            <button class="example-btn" onclick="loadExample('input')">
+                ⌨️ User Input
+            </button>
+            <button class="example-btn" onclick="loadExample('loops')">
+                🔄 Loops & Logic
+            </button>
+            <button class="example-btn" onclick="loadExample('modules')">
+                📦 Import Modules
+            </button>
+            <button class="example-btn" onclick="loadExample('advanced')">
+                🚀 Advanced Example
+            </button>
+        </div>
+    </div>
+
+    <!-- Code Editor -->
+    <div class="container">
+        <h3>💻 Python Code Editor</h3>
+        <textarea id="codeEditor" placeholder="Enter your Python code here..."># Welcome to WebRunnr Core!
+print("🚀 Testing WebRunnr Core with Python executor")
+print("=" * 50)
+
+# Test basic functionality
+import math
+print(f"✅ Math module loaded: π = {math.pi:.4f}")
+
+# Test user interaction
+name = input("👋 What's your name? ")
+print(f"Nice to meet you, {name}!")
+
+# Test computation
+age = int(input("🎂 What's your age? "))
+print(f"In 10 years, you'll be {age + 10} years old!")
+
+print("🎉 WebRunnr Core integration test completed!")</textarea>
+        
+        <div style="margin-top: 15px;">
+            <button id="runButton" onclick="runCode()" disabled>▶️ Run Code</button>
+            <button onclick="clearOutput()">🗑️ Clear Output</button>
+            <button onclick="stopExecution()">⏹️ Stop</button>
+        </div>
+    </div>
+
+    <!-- Output Console -->
+    <div class="container">
+        <h3>📤 Console Output</h3>
+        <div id="output" class="output">🔧 Initializing WebRunnr Core...</div>
+    </div>
+
+    <script type="module">
+        // WebRunnr Core Integration Demo
+        class WebRunnrCoreDemo {
+            constructor() {
+                this.worker = null;
+                this.isReady = false;
+                this.isExecuting = false;
+                this.initialize();
+            }
+
+            async initialize() {
+                try {
+                    updateStatus('🔧 Initializing Python executor...', 'waiting');
+                    logOutput('🚀 Starting WebRunnr Core initialization...\n');
+                    
+                    // Create the Python worker
+                    this.worker = new Worker('/packages/py-executor/dist/index.js', { type: 'module' });
+                    
+                    // Set up message handling
+                    this.worker.onmessage = (event) => this.handleWorkerMessage(event);
+                    this.worker.onerror = (error) => {
+                        updateStatus('❌ Worker Error', 'error');
+                        logOutput(`❌ Worker error: ${error.message}\n`, 'error');
+                        console.error('Worker error:', error);
+                    };
+                    
+                } catch (error) {
+                    updateStatus('❌ Initialization Failed', 'error');
+                    logOutput(`❌ Initialization error: ${error.message}\n`, 'error');
+                    console.error('Core initialization error:', error);
+                }
+            }
+
+            handleWorkerMessage(event) {
+                const { type, data, prompt } = event.data;
+                
+                switch (type) {
+                    case 'ready':
+                        this.isReady = true;
+                        document.getElementById('runButton').disabled = false;
+                        updateStatus('✅ Ready to execute Python code!', 'ready');
+                        logOutput('✅ Python executor is ready!\n📝 You can now run Python code.\n\n', 'success');
+                        updateSupportedLanguages();
+                        break;
+                        
+                    case 'stdout':
+                        logOutput(data);
+                        break;
+                        
+                    case 'stderr':
+                        logOutput(data, 'error');
+                        break;
+                        
+                    case 'error':
+                        logOutput(`\n❌ EXECUTION ERROR: ${data}\n`, 'error');
+                        this.executionComplete();
+                        break;
+                        
+                    case 'done':
+                        logOutput('\n✅ --- Execution completed successfully ---\n', 'success');
+                        this.executionComplete();
+                        break;
+                        
+                    case 'input_request':
+                        updateStatus('⌨️ Waiting for user input...', 'running');
+                        logOutput(`\n⌨️ ${prompt}\n`, 'info');
+                        const userInput = window.prompt(prompt || 'Enter value:');
+                        this.worker.postMessage({ type: 'input_response', value: userInput || '' });
+                        logOutput(`> ${userInput || ''}\n`, 'info');
+                        updateStatus('🔄 Executing...', 'running');
+                        break;
+                        
+                    default:
+                        console.log('Unknown message from worker:', event.data);
+                }
+            }
+
+            async execute(code) {
+                if (!this.isReady) {
+                    throw new Error('Python executor is not ready yet');
+                }
+                
+                if (this.isExecuting) {
+                    throw new Error('Code is already executing');
+                }
+
+                this.isExecuting = true;
+                document.getElementById('runButton').disabled = true;
+                
+                logOutput('🚀 --- Starting execution ---\n', 'info');
+                updateStatus('🔄 Executing Python code...', 'running');
+                
+                // Send code to worker
+                this.worker.postMessage({ code });
+            }
+
+            executionComplete() {
+                this.isExecuting = false;
+                updateStatus('✅ Ready', 'ready');
+                document.getElementById('runButton').disabled = false;
+            }
+
+            stop() {
+                if (this.worker && this.isExecuting) {
+                    this.worker.terminate();
+                    this.isExecuting = false;
+                    updateStatus('⏹️ Stopped', 'error');
+                    logOutput('\n⏹️ Execution stopped by user\n', 'warning');
+                    // Reinitialize worker
+                    setTimeout(() => this.initialize(), 1000);
+                }
+            }
+        }
+
+        // Global variables
+        let core;
+        const outputDiv = document.getElementById('output');
+        const codeEditor = document.getElementById('codeEditor');
+        
+        // Utility functions
+        function updateStatus(message, state) {
+            const statusDiv = document.getElementById('systemStatus');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${state}`;
+        }
+
+        function updateSupportedLanguages() {
+            const div = document.getElementById('supportedLanguages');
+            div.innerHTML = '🌐 <strong>Supported Languages:</strong> Python (Pyodide) | Coming Soon: JavaScript, TypeScript, C++, Java';
+        }
+
+        function logOutput(message, type = 'info') {
+            const className = type === 'success' ? 'success' : 
+                            type === 'error' ? 'error' : 
+                            type === 'warning' ? 'warning' : 'info';
+            
+            const span = `<span class="${className}">${message}</span>`;
+            outputDiv.innerHTML += span;
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        // Global functions
+        window.runCode = async () => {
+            const code = codeEditor.value.trim();
+            if (!code) {
+                alert('📝 Please enter some Python code to execute.');
+                return;
+            }
+            
+            if (!core.isReady) {
+                alert('⏳ Python executor is not ready yet. Please wait...');
+                return;
+            }
+            
+            try {
+                await core.execute(code);
+            } catch (error) {
+                updateStatus('❌ Error', 'error');
+                logOutput(`\n❌ ${error.message}\n`, 'error');
+                core.executionComplete();
+            }
+        };
+
+        window.clearOutput = () => {
+            outputDiv.innerHTML = '🗑️ Output cleared.\n';
+        };
+
+        window.stopExecution = () => {
+            core.stop();
+        };
+
+        window.loadExample = (type) => {
+            const examples = {
+                hello: `# 👋 Hello World Example
+print("Hello, WebRunnr Core!")
+print("This is Python running in your browser!")`,
+
+                math: `# 🧮 Math Operations Example
+import math
+
+print("Mathematical operations:")
+print(f"π = {math.pi:.6f}")
+print(f"e = {math.e:.6f}")
+print(f"√2 = {math.sqrt(2):.6f}")
+
+# Calculate some values
+radius = 5
+area = math.pi * radius ** 2
+print(f"Circle with radius {radius} has area {area:.2f}")`,
+
+                input: `# ⌨️ User Input Example
+print("Interactive input demonstration:")
+
+name = input("What's your name? ")
+age = input("What's your age? ")
+color = input("What's your favorite color? ")
+
+print(f"\\nHello {name}!")
+print(f"You are {age} years old and love {color}.")
+print("Thanks for trying WebRunnr Core!")`,
+
+                loops: `# 🔄 Loops & Logic Example
+print("Counting and conditions:")
+
+# Count to 10
+for i in range(1, 11):
+    if i % 2 == 0:
+        print(f"{i} is even")
+    else:
+        print(f"{i} is odd")
+
+# Fibonacci sequence
+print("\\nFibonacci sequence:")
+a, b = 0, 1
+for _ in range(10):
+    print(a, end=" ")
+    a, b = b, a + b
+print()`,
+
+                modules: `# 📦 Import Modules Example
+import math
+import random
+import json
+
+print("Testing various Python modules:")
+
+# Math module
+print(f"Random number: {random.randint(1, 100)}")
+print(f"Sin(π/2) = {math.sin(math.pi/2)}")
+
+# JSON module
+data = {"name": "WebRunnr", "version": "1.0", "language": "Python"}
+json_str = json.dumps(data, indent=2)
+print(f"JSON data:\\n{json_str}")`,
+
+                advanced: `# 🚀 Advanced Example
+print("🚀 Advanced WebRunnr Core Demo")
+print("=" * 40)
+
+import math
+import json
+import random
+
+# Object-oriented programming
+class Calculator:
+    def __init__(self):
+        self.history = []
+    
+    def add(self, a, b):
+        result = a + b
+        self.history.append(f"{a} + {b} = {result}")
+        return result
+    
+    def get_history(self):
+        return self.history
+
+# Use the calculator
+calc = Calculator()
+print(f"5 + 3 = {calc.add(5, 3)}")
+print(f"10 + 7 = {calc.add(10, 7)}")
+
+# Interactive part
+name = input("Enter your name: ")
+print(f"Hello {name}! Let's do some calculations.")
+
+num1 = float(input("Enter first number: "))
+num2 = float(input("Enter second number: "))
+result = calc.add(num1, num2)
+
+print(f"\\nResult: {num1} + {num2} = {result}")
+print("\\nCalculation history:")
+for entry in calc.get_history():
+    print(f"  {entry}")
+
+print("\\n🎉 Advanced demo completed!")`
+            };
+
+            if (examples[type]) {
+                codeEditor.value = examples[type];
+            }
+        };
+
+        // Initialize the core
+        document.getElementById('runButton').disabled = true;
+        core = new WebRunnrCoreDemo();
+    </script>
+</body>
+</html>

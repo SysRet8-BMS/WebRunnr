@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Required headers for Pyodide -->
+    <meta http-equiv="Cross-Origin-Opener-Policy" content="same-origin">
+    <meta http-equiv="Cross-Origin-Embedder-Policy" content="require-corp">
+    <title>WebRunnr Core with Python Executor</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            background-color: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 4px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #005a9e;
+        }
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+        .output {
+            background-color: #1a1a1a;
+            border: 1px solid #555;
+            padding: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.ready {
+            background-color: #2d5a2d;
+            color: #90ee90;
+        }
+        .status.running {
+            background-color: #2d4a5a;
+            color: #87ceeb;
+        }
+        .status.error {
+            background-color: #5a2d2d;
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebRunnr Core Demo</h1>
+    <p>This demonstrates the WebRunnr Core package working with the Python executor.</p>
+
+    <div class="container">
+        <h3>Python Code Editor</h3>
+        <textarea id="codeEditor" placeholder="Enter your Python code here...">print("Hello from WebRunnr Core!")
+name = input("What's your name? ")
+print(f"Nice to meet you, {name}!")
+
+# Example with some computation
+import math
+for i in range(5):
+    print(f"√{i} = {math.sqrt(i) if i > 0 else 0:.2f}")</textarea>
+        
+        <div>
+            <button id="runButton" onclick="runCode()">Run Python Code</button>
+            <button onclick="clearOutput()">Clear Output</button>
+            <button onclick="loadExample()">Load Example</button>
+        </div>
+        
+        <div id="status" class="status">Initializing WebRunnr Core...</div>
+    </div>
+
+    <div class="container">
+        <h3>Output</h3>
+        <div id="output" class="output">Waiting for execution...</div>
+    </div>
+
+    <script type="module">
+        // Import the WebRunnr Core (in a real setup, this would be from a built module)
+        // For this demo, we'll create a simplified version that mimics the core functionality
+        
+        let core;
+        let isReady = false;
+        
+        const codeEditor = document.getElementById('codeEditor');
+        const outputDiv = document.getElementById('output');
+        const statusDiv = document.getElementById('status');
+        const runButton = document.getElementById('runButton');
+
+        // Simplified WebRunnr Core implementation for demo
+        class WebRunnrCoreDemo {
+            constructor() {
+                this.worker = null;
+                this.isWorkerReady = false;
+                this.initialize();
+            }
+
+            async initialize() {
+                try {
+                    updateStatus('Initializing Python executor...', 'running');
+                    
+                    // Create the Python worker (using localhost server path)
+                    this.worker = new Worker('/packages/py-executor/dist/index.js', { type: 'module' });
+                    
+                    // Set up message handling
+                    this.worker.onmessage = (event) => {
+                        this.handleWorkerMessage(event);
+                    };
+                    
+                    this.worker.onerror = (error) => {
+                        updateStatus(`Worker Error: ${error.message}`, 'error');
+                        console.error('Worker error:', error);
+                    };
+                    
+                } catch (error) {
+                    updateStatus(`Initialization Error: ${error.message}`, 'error');
+                    console.error('Core initialization error:', error);
+                }
+            }
+
+            handleWorkerMessage(event) {
+                const { type, data, prompt } = event.data;
+                
+                switch (type) {
+                    case 'ready':
+                        this.isWorkerReady = true;
+                        isReady = true;
+                        runButton.disabled = false;
+                        updateStatus('Ready to execute Python code!', 'ready');
+                        outputDiv.textContent = 'Python executor is ready. Click "Run Python Code" to execute your code.';
+                        break;
+                        
+                    case 'stdout':
+                        outputDiv.textContent += data;
+                        outputDiv.scrollTop = outputDiv.scrollHeight;
+                        break;
+                        
+                    case 'stderr':
+                        outputDiv.textContent += `[ERROR] ${data}`;
+                        outputDiv.scrollTop = outputDiv.scrollHeight;
+                        break;
+                        
+                    case 'error':
+                        outputDiv.textContent += `\n[EXECUTION ERROR] ${data}\n`;
+                        updateStatus('Ready (execution completed with errors)', 'error');
+                        runButton.disabled = false;
+                        break;
+                        
+                    case 'done':
+                        outputDiv.textContent += '\n--- Execution completed ---\n';
+                        updateStatus('Ready', 'ready');
+                        runButton.disabled = false;
+                        break;
+                        
+                    case 'input_request':
+                        updateStatus('Waiting for user input...', 'running');
+                        const userInput = window.prompt(prompt || 'Enter value:');
+                        this.worker.postMessage({ type: 'input_response', value: userInput || '' });
+                        outputDiv.textContent += `\n> ${userInput || ''}\n`;
+                        updateStatus('Executing...', 'running');
+                        break;
+                        
+                    default:
+                        console.log('Unknown message from worker:', event.data);
+                }
+            }
+
+            async execute(request) {
+                if (!this.isWorkerReady) {
+                    throw new Error('Python executor is not ready yet');
+                }
+                
+                // Clear previous output
+                outputDiv.textContent = '--- Starting execution ---\n';
+                updateStatus('Executing Python code...', 'running');
+                runButton.disabled = true;
+                
+                // Send code to worker
+                this.worker.postMessage({ code: request.code });
+                
+                // Note: In the full implementation, this would return a Promise
+                // that resolves when execution is complete. For this demo,
+                // we handle results through the message system.
+            }
+        }
+
+        function updateStatus(message, state) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${state}`;
+        }
+
+        // Global functions
+        window.runCode = async () => {
+            const code = codeEditor.value.trim();
+            if (!code) {
+                alert('Please enter some Python code to execute.');
+                return;
+            }
+            
+            if (!isReady) {
+                alert('Python executor is not ready yet. Please wait...');
+                return;
+            }
+            
+            try {
+                await core.execute({ code, language: 'python' });
+            } catch (error) {
+                updateStatus(`Error: ${error.message}`, 'error');
+                outputDiv.textContent += `\n[ERROR] ${error.message}\n`;
+                runButton.disabled = false;
+            }
+        };
+
+        window.clearOutput = () => {
+            outputDiv.textContent = 'Output cleared.';
+        };
+
+        window.loadExample = () => {
+            codeEditor.value = `# WebRunnr Core Python Example
+print("Welcome to WebRunnr!")
+print("This is running through the Core API")
+
+# Get user input
+name = input("Enter your name: ")
+age = input("Enter your age: ")
+
+print(f"Hello {name}, you are {age} years old!")
+
+# Some calculations
+import math
+print(f"\\nFun fact: The square root of your age is {math.sqrt(int(age)):.2f}")
+
+# Loop example
+print("\\nCounting down from 5:")
+for i in range(5, 0, -1):
+    print(f"{i}...")
+print("Done!")`;
+        };
+
+        // Initialize the core
+        runButton.disabled = true;
+        core = new WebRunnrCoreDemo();
+    </script>
+</body>
+</html>

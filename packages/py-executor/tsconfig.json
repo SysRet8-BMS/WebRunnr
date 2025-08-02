@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "moduleResolution": "bundler", // Change from node to bundler
+    "moduleResolution": "bundler",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -12,13 +12,14 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"], // Added WebWorker
+    "lib": ["ES2022", "WebWorker"],
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmitOnError": true,
     "incremental": true,
-    "composite": true
+    "composite": true,
+    "types": []
   },
   "include": ["src/**/*"],
   "exclude": ["dist", "node_modules"]
